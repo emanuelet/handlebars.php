@@ -103,7 +103,7 @@ class FilesystemLoader implements Loader
      */
     public function load($name)
     {
-        if (empty($this->_templates) || !isset($this->_templates["$name"])) {
+        if (!isset($this->_templates["$name"])) {
             $this->_templates["$name"] = $this->loadFile($name);
         }
 
