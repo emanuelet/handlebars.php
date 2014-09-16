@@ -80,7 +80,7 @@ class CompareHelper implements Helper
                 $result = (gettype($left) == $right);
                 break;
             default:
-                throw new \Exception('Handlerbrs Helper "compare" doesn\'t know the operator ' . $operator);
+                throw new \Exception('Handlebars Helper "compare" doesn\'t know the operator ' . $operator);
         }
         
         return $result;
