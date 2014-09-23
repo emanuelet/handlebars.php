@@ -20,6 +20,7 @@
 namespace Handlebars;
 use Handlebars\Loader\StringLoader;
 use Handlebars\Cache\Disk;
+use Handlebars\Cache\Dummy;
 
 /**
  * Handlebars template engine, based on mustache.
