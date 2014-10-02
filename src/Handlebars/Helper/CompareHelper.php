@@ -45,16 +45,22 @@ class CompareHelper implements Helper
     private function getData(Context $context, $arguments) {
         $data = $arguments['data']; 
         if ($arguments['type'] == self::NORM_TYPE) {
-            if (is_numeric($data)) {
-                $data += 0;
-            } elseif (strtolower($data) == 'true') {
-                $data = true;
-            } elseif (strtolower($data) == 'false') {
-                $data = false;
-            } elseif (strtolower($data) == 'null') {
-                $data = null;
-            } else {
-                $data = $context->get($data);
+            switch($data) {
+                case (is_numeric($data)):
+                    $data += 0;
+                    break;
+                case (strtolower($data) == 'true'):
+                    $data = true;
+                    break;
+                case (strtolower($data) == 'false'):
+                    $data = false;
+                    break;
+                case (strtolower($data) == 'null'):
+                    $data = null;
+                    break;
+                default:
+                    $data = $context->get($data);
+                    break;
             }
         }
          
