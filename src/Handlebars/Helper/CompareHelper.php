@@ -21,9 +21,9 @@ class CompareHelper implements Helper
     public function execute(Template $template, Context $context, $args, $source)
     {
         $arguments = $this->split($args);
-        $left = $context->get($arguments[0]);
-        $operator = $arguments[1];
-        $right = $context->get($arguments[2]);
+        $left = $this->getData($context, $arguments[0]);
+        $operator = $arguments[1]['data'];
+        $right = $this->getData($context, $arguments[2]);
 
         if ($this->compare($left, $operator, $right)) {
             $template->setStopToken('else');
@@ -39,15 +39,70 @@ class CompareHelper implements Helper
         return $buffer;
     }
     
+    private function getData(Context $context, $arguments) {
+        $data = $arguments['data']; 
+        if ($arguments['type'] == 'normal') {
+            if (is_numeric($data)) {
+                $data += 0;
+            } elseif (strtolower($data) == 'true') {
+                $data = true;
+            } elseif (strtolower($data) == 'false') {
+                $data = false;
+            } else {
+                $data = $context->get($data);
+            }
+        }
+         
+        return $data;
+    }
+    
     private function split($args) {
         //replace \' with \"
         $args = str_replace("'", '"', $args);
-        $arguments = explode('"', $args);
-        if (empty($arguments) || sizeof($arguments) != 3) {
-            throw new \InvalidArgumentException("Arguments error for compare helper!");
+        $chars = str_split($args);
+        $mode = 'normal';
+        $token = '';
+        $tokens = [];
+        for ($i = 0; $i < count($chars); $i++) {
+            switch ($mode) {
+                case 'normal':
+                    if ('"' == $chars[$i]) {
+                        if ('' != $token) {
+                            $tokens[] = $token;
+                        }
+                        $token = '';
+                        $mode = 'quoting';
+                    } else if (' ' == $chars[$i] || "\t" == $chars[$i] || "\n" == $chars[$i]) {
+                        if ('' != $token) {
+                            $tokens[] = ['type' => 'normal', 'data' => $token];
+                        }
+                        $token = '';
+                    } else {
+                        $token .= $chars[$i];
+                    }
+                    break;
+
+                case 'quoting':
+                    if ('"' == $chars[$i]) {
+                        if ('' != $token) {
+                            $tokens[] = ['type' => 'quoting', 'data' => $token];
+                        }
+                        $token = '';
+                        $mode = 'normal';
+                    } else {
+                        $token .= $chars[$i];
+                    }
+                    break;
+            }
         }
-        
-        return $arguments;
+        if ('' != $token) {
+            $tokens[] = ['type' => 'normal', 'data' => $token];
+        }
+        if (empty($tokens) || sizeof($tokens) != 3 || $tokens[1]['type'] != 'quoting') {
+            throw new \InvalidArgumentException('Arguments error for compare helper arguments (' . $args . ')');
+        }
+
+        return $tokens;
     }
     
     private function compare($left, $operator, $right) {
