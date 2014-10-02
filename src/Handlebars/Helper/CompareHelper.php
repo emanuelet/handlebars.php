@@ -10,6 +10,7 @@ class CompareHelper implements Helper
 {
     const NORM_TYPE = 'normal';
     const QUOT_TYPE = 'quoting';
+    
     /**
      * Execute the helper
      *
@@ -70,7 +71,7 @@ class CompareHelper implements Helper
         for ($i = 0; $i < count($chars); $i++) {
             switch ($mode) {
                 case self::NORM_TYPE:
-                    if ($chars[$i] =='"') {
+                    if ($chars[$i] == '"') {
                         if ($token != '') {
                             $tokens[] = ['type' => self::NORM_TYPE, 'data' => $token];
                         }
