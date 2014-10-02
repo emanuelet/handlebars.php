@@ -73,13 +73,13 @@ class CompareHelper implements Helper
                 case self::NORM_TYPE:
                     if ($chars[$i] == '"') {
                         if ($token != '') {
-                            $tokens[] = ['type' => self::NORM_TYPE, 'data' => $token];
+                            $tokens[] = ['type' => $mode, 'data' => $token];
                         }
                         $token = '';
                         $mode = self::QUOT_TYPE;
                     } elseif ($chars[$i] == ' ' || $chars[$i] == "\t" || $chars[$i] == "\n") {
                         if ($token != '') {
-                            $tokens[] = ['type' => self::NORM_TYPE, 'data' => $token];
+                            $tokens[] = ['type' => $mode, 'data' => $token];
                         }
                         $token = '';
                     } else {
@@ -90,7 +90,7 @@ class CompareHelper implements Helper
                 case self::QUOT_TYPE:
                     if ($chars[$i] == '"') {
                         if ($token != '') {
-                            $tokens[] = ['type' => self::QUOT_TYPE, 'data' => $token];
+                            $tokens[] = ['type' => $mode, 'data' => $token];
                         }
                         $token = '';
                         $mode = self::NORM_TYPE;
@@ -100,8 +100,10 @@ class CompareHelper implements Helper
                     break;
             }
         }
-        if ($token != '') {
-            $tokens[] = ['type' => self::NORM_TYPE, 'data' => $token];
+        if ($mode == self::QUOT_TYPE) {
+            throw new \InvalidArgumentException('Quotation marks not match (' . $args . ')');
+        } elseif ($token != '') {
+            $tokens[] = ['type' => $mode, 'data' => $token];
         }
         if (empty($tokens) || sizeof($tokens) != 3 || $tokens[1]['type'] != self::QUOT_TYPE) {
             throw new \InvalidArgumentException('Arguments error for compare helper arguments (' . $args . ')');
