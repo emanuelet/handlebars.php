@@ -50,6 +50,8 @@ class CompareHelper implements Helper
                 $data = true;
             } elseif (strtolower($data) == 'false') {
                 $data = false;
+            } elseif (strtolower($data) == 'null') {
+                $data = null;
             } else {
                 $data = $context->get($data);
             }
@@ -74,7 +76,7 @@ class CompareHelper implements Helper
                         }
                         $token = '';
                         $mode = self::QUOT_TYPE;
-                    } else if ($chars[$i] == ' ' || $chars[$i] == "\t" || $chars[$i] == "\n") {
+                    } elseif ($chars[$i] == ' ' || $chars[$i] == "\t" || $chars[$i] == "\n") {
                         if ($token != '') {
                             $tokens[] = ['type' => self::NORM_TYPE, 'data' => $token];
                         }
