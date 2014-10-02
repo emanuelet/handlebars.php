@@ -185,6 +185,46 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
     {
         return array(
             array(
+                '{{#compare foo "==" "Hello " }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => 'Hello'),
+                'Not Equal'
+            ),
+            array(
+                '{{#compare foo "==" "Hello" }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => 'Hello'),
+                'Equal'
+            ),
+            array(
+                '{{#compare "Hello" "==" foo }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => 'Hello'),
+                'Equal'
+            ),
+            array(
+                '{{#compare "foo" "==" "Hello" }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => 'Hello'),
+                'Not Equal'
+            ),
+            array(
+                '{{#compare foo "==" 1 }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => true),
+                'Equal'
+            ),
+            array(
+                '{{#compare foo "==" true }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => true),
+                'Equal'
+            ),            
+            array(
+                '{{#compare foo "==" bar }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => 'Hello', 'bar' => 'Hello'),
+                'Equal'
+            ),
+            array(
+                '{{#compare "Hello" "==" "Hello" }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => 'Hello'),
+                'Equal'
+            ),
+            array(
                 '{{#compare foo "==" bar }}Equal{{else}}Not Equal{{/compare}}',
                 array('foo' => true, 'bar' => 1),
                 'Equal'
@@ -205,6 +245,28 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
                 'Not Equal'
             ),
             array(
+                '{{#compare 5 "!==" foo }}Not Equal{{else}}Equal{{/compare}}',
+                array('foo' => 5),
+                'Equal'
+            ),
+            array(
+                '{{#compare "5" "!==" foo }}Not Equal{{else}}Equal{{/compare}}',
+                array('foo' => 5),
+                'Not Equal'
+            ),
+         
+            array(
+                '{{#compare foo "!==" 5 }}Not Equal{{else}}Equal{{/compare}}',
+                array('foo' => 5),
+                'Equal'
+            ),
+            array(
+                '{{#compare foo "!==" "5" }}Not Equal{{else}}Equal{{/compare}}',
+                array('foo' => 5),
+                'Not Equal'
+            ),
+                
+            array(
                 '{{#compare foo "!=" bar }}Not Equal{{else}}Equal{{/compare}}',
                 array('foo' => 4, 'bar' => 5),
                 'Not Equal'
@@ -218,11 +280,6 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
                 '{{#compare foo "!==" bar }}Not Equal{{else}}Equal{{/compare}}',
                 array('foo' => 4, 'bar' => 5),
                 'Not Equal'
-            ),
-            array(
-                '{{#compare foo "!==" bar }}Not Equal{{else}}Equal{{/compare}}',
-                array('foo' => 5, 'bar' => 5),
-                'Equal'
             ),
             array(
                 '{{#compare foo "<" bar }}Less{{else}}No Less{{/compare}}',
