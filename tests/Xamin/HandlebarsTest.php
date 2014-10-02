@@ -250,7 +250,7 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
                 'Equal'
             ),
             array(
-                '{{#compare "5" "!==" as foo }}Not Equal{{else}}Equal{{/compare}}',
+                '{{#compare "5" "!==" foo }}Not Equal{{else}}Equal{{/compare}}',
                 array('foo' => 5),
                 'Not Equal'
             ),

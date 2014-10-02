@@ -8,6 +8,8 @@ use Handlebars\Template;
 
 class CompareHelper implements Helper
 {
+    const NORM_TYPE = 'normal';
+    const QUOT_TYPE = 'quoting';
     /**
      * Execute the helper
      *
@@ -41,7 +43,7 @@ class CompareHelper implements Helper
     
     private function getData(Context $context, $arguments) {
         $data = $arguments['data']; 
-        if ($arguments['type'] == 'normal') {
+        if ($arguments['type'] == self::NORM_TYPE) {
             if (is_numeric($data)) {
                 $data += 0;
             } elseif (strtolower($data) == 'true') {
@@ -60,21 +62,21 @@ class CompareHelper implements Helper
         //replace \' with \"
         $args = str_replace("'", '"', $args);
         $chars = str_split($args);
-        $mode = 'normal';
+        $mode = self::NORM_TYPE;
         $token = '';
         $tokens = [];
         for ($i = 0; $i < count($chars); $i++) {
             switch ($mode) {
-                case 'normal':
-                    if ('"' == $chars[$i]) {
-                        if ('' != $token) {
-                            $tokens[] = $token;
+                case self::NORM_TYPE:
+                    if ($chars[$i] =='"') {
+                        if ($token != '') {
+                            $tokens[] = ['type' => self::NORM_TYPE, 'data' => $token];
                         }
                         $token = '';
-                        $mode = 'quoting';
-                    } else if (' ' == $chars[$i] || "\t" == $chars[$i] || "\n" == $chars[$i]) {
-                        if ('' != $token) {
-                            $tokens[] = ['type' => 'normal', 'data' => $token];
+                        $mode = self::QUOT_TYPE;
+                    } else if ($chars[$i] == ' ' || $chars[$i] == "\t" || $chars[$i] == "\n") {
+                        if ($token != '') {
+                            $tokens[] = ['type' => self::NORM_TYPE, 'data' => $token];
                         }
                         $token = '';
                     } else {
@@ -82,23 +84,23 @@ class CompareHelper implements Helper
                     }
                     break;
 
-                case 'quoting':
-                    if ('"' == $chars[$i]) {
-                        if ('' != $token) {
-                            $tokens[] = ['type' => 'quoting', 'data' => $token];
+                case self::QUOT_TYPE:
+                    if ($chars[$i] == '"') {
+                        if ($token != '') {
+                            $tokens[] = ['type' => self::QUOT_TYPE, 'data' => $token];
                         }
                         $token = '';
-                        $mode = 'normal';
+                        $mode = self::NORM_TYPE;
                     } else {
                         $token .= $chars[$i];
                     }
                     break;
             }
         }
-        if ('' != $token) {
-            $tokens[] = ['type' => 'normal', 'data' => $token];
+        if ($token != '') {
+            $tokens[] = ['type' => self::NORM_TYPE, 'data' => $token];
         }
-        if (empty($tokens) || sizeof($tokens) != 3 || $tokens[1]['type'] != 'quoting') {
+        if (empty($tokens) || sizeof($tokens) != 3 || $tokens[1]['type'] != self::QUOT_TYPE) {
             throw new \InvalidArgumentException('Arguments error for compare helper arguments (' . $args . ')');
         }
 
