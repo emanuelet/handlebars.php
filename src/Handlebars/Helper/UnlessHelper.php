@@ -50,7 +50,10 @@ class UnlessHelper implements Helper
      */
     public function execute(Template $template, Context $context, $args, $source)
     {
-        $tmp = $context->get($args);
+        $parsedArgs = $template->parseArguments($args);
+        $tmp = $context->get($parsedArgs[0]);
+
+        $context->push($context->last());
 
         if (!$tmp) {
             $template->setStopToken('else');
@@ -62,6 +65,8 @@ class UnlessHelper implements Helper
             $template->setStopToken(false);
             $buffer = $template->render($context);
         }
+
+        $context->pop();
 
         return $buffer;
     }
