@@ -50,12 +50,10 @@ class IfHelper implements Helper
      */
     public function execute(Template $template, Context $context, $args, $source)
     {
-        if (is_numeric($args)) {
-            $tmp = $args;
-        } else {
-            $tmp = $context->get($args);
-        }
+        $parsedArgs = $template->parseArguments($args);
+        $tmp = $context->get($parsedArgs[0]);
 
+        $context->push($context->last());
         if ($tmp) {
             $template->setStopToken('else');
             $buffer = $template->render($context);
@@ -67,6 +65,7 @@ class IfHelper implements Helper
             $template->setStopToken(false);
             $buffer = $template->render($context);
         }
+        $context->pop();
 
         return $buffer;
     }

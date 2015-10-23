@@ -185,7 +185,7 @@ class Context
      */
     public function get($variableName, $strict = false)
     {
-        if ($variableName instanceof \Handlebars\String) {
+        if ($variableName instanceof \Handlebars\StringWrapper) {
             return (string)$variableName;
         }
         $variableName = trim($variableName);
@@ -197,11 +197,18 @@ class Context
         if (count($this->stack) < $level) {
             if ($strict) {
                 throw new \InvalidArgumentException(
-                    'can not find variable in context'
+                    sprintf(
+                        'Can not find variable in context: "%s"',
+                        $variableName
+                    )
                 );
             }
 
             return '';
+        }
+        if (substr($variableName, 0, 6) == '@root.') {
+            $variableName = trim(substr($variableName, 6));
+            $level = count($this->stack)-1;
         }
         end($this->stack);
         while ($level) {
@@ -212,9 +219,13 @@ class Context
         if (!$variableName) {
             if ($strict) {
                 throw new \InvalidArgumentException(
-                    'can not find variable in context'
+                    sprintf(
+                        'Can not find variable in context: "%s"',
+                        $variableName
+                    )
                 );
             }
+
             return '';
         } elseif ($variableName == '.' || $variableName == 'this') {
             return $current;
@@ -224,7 +235,10 @@ class Context
                 return $specialVariables[$variableName];
             } elseif ($strict) {
                 throw new \InvalidArgumentException(
-                    'can not find variable in context'
+                    sprintf(
+                        'Can not find variable in context: "%s"',
+                        $variableName
+                    )
                 );
             } else {
                 return '';
@@ -253,7 +267,7 @@ class Context
      */
     private function _findVariableInContext($variable, $inside, $strict = false)
     {
-        $value = '';
+        $value = null;
         if (($inside !== '0' && empty($inside)) || ($inside == 'this')) {
             return $variable;
         } elseif (is_array($variable)) {
@@ -271,7 +285,12 @@ class Context
         }
 
         if ($strict) {
-            throw new \InvalidArgumentException('can not find variable in context');
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'Can not find variable in context: "%s"',
+                    $inside
+                )
+            );
         }
 
         return $value;
@@ -295,7 +314,12 @@ class Context
         $get_pattern = "/(?:" . $name_pattern . ")/";
 
         if (!preg_match($check_pattern, $variableName)) {
-            throw new \InvalidArgumentException('variable name is invalid');
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'Variable name is invalid: "%s"',
+                    $variableName
+                )
+            );
         }
 
         preg_match_all($get_pattern, $variableName, $matches);
