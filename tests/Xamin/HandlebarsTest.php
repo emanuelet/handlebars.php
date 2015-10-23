@@ -16,7 +16,7 @@
  */
 
 /**
- * Class AutoloaderTest
+ * Class HandlebarsTest
  */
 class HandlebarsTest extends \PHPUnit_Framework_TestCase
 {
@@ -118,38 +118,67 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
                 '<strong>Test</strong>'
             ),
             array(
-                "\{{data}}", // is equal to \\{{data}}
+                "\\{{data}}", // is equal to \{{data}} in template file
                 array('data' => 'foo'),
                 '{{data}}',
             ),
             array(
-                '\\\\{{data}}',
+                '\\\\{{data}}', // is equal to \\{{data}} in template file
                 array('data' => 'foo'),
-                '\\\\foo'
+                '\\foo' // is equals to \foo in output
             ),
             array(
-                '\\\{{data}}', // is equal to \\\\{{data}} in php
+                '\\\\\\{{data}}', // is equal to \\\{{data}} in template file
                 array('data' => 'foo'),
-                '\\\\foo'
+                '\\\\foo' // is equals to \\foo in output
             ),
             array(
-                '\{{{data}}}',
+                '\\\\\\\\{{data}}', // is equal to \\\\{{data}} in template file
+                array('data' => 'foo'),
+                '\\\\\\foo' // is equals to \\\foo in output
+            ),
+            array(
+                '\{{{data}}}', // is equal to \{{{data}}} in template file
                 array('data' => 'foo'),
                 '{{{data}}}'
             ),
             array(
-                '\pi',
+                '\pi', // is equal to \pi in template
                 array(),
                 '\pi'
             ),
             array(
-                '\\\\\\\\qux',
+                '\\\\foo', // is equal to \\foo in template
+                array(),
+                '\\\\foo'
+            ),
+            array(
+                '\\\\\\bar', // is equal to \\\bar in template
+                array(),
+                '\\\\\\bar'
+            ),
+            array(
+                '\\\\\\\\qux', // is equal to \\\\qux in template file
                 array(),
                 '\\\\\\\\qux'
             ),
+            array(
+                "var jsVar = 'It\'s a phrase in apos';",
+                array(),
+                "var jsVar = 'It\'s a phrase in apos';"
+            ),
+            array(
+                'var jsVar = "A \"quoted\" text";',
+                array(),
+                'var jsVar = "A \"quoted\" text";',
+            ),
+            array(
+                '{{#if first}}The first{{else}}{{#if second}}The second{{/if}}{{/if}}',
+                array('first' => false, 'second' => true),
+                'The second'
+            ),
         );
     }
-
 
     /**
      * Test helpers (internal helpers)
@@ -346,6 +375,12 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
                 array('data' => true),
                 'Yes'
             ),
+            # see the issue #76
+            array(
+                '{{#if data}}0{{/if}}',
+                array('data' => true),
+                '0'
+            ),
             array(
                 '{{#if data}}Yes{{/if}}',
                 array('data' => false),
@@ -360,6 +395,11 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
                 '{{#each data}}{{this}}{{/each}}',
                 array('data' => array(1, 2, 3, 4)),
                 '1234'
+            ),
+            array(
+                '{{#each data}}{{@key}}{{/each}}',
+                array('data' => array('the_only_key' => 1)),
+                'the_only_key'
             ),
             array(
                 '{{#each data}}{{@key}}=>{{this}}{{/each}}',
@@ -430,8 +470,56 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
                 '{{#if 0}}ok{{else}}fail{{/if}}',
                 array(),
                 'fail'
-            )
+            ),
+            array(
+                '  {{~#if 1}}OK   {{~else~}} NO {{~/if~}}  END',
+                array(),
+                'OKEND'
+            ),
+            array(
+                'XX {{~#bindAttr data}} XX',
+                array(),
+                'XXdata XX'
+            ),
+            array(
+                '{{#each data}}{{#if @last}}the last is
+                {{~this}}{{/if}}{{/each}}',
+                array('data' => array('one', 'two', 'three')),
+                'the last isthree'
+            ),
+            array(
+                '{{#with data}}
 
+                {{~key~}}
+
+                {{/with}}',
+                array('data' => array('key' => 'result')),
+                'result'
+            ),
+            array(
+                '{{= (( )) =}}((#if 1))OK((else))NO((/if))',
+                array(),
+                'OK'
+            ),
+            array(
+                '{{#each data~}}    {{this}}    {{~/each}}',
+                array('data' => array(1, 2, 3, 4)),
+                '1234'
+            ),
+            array(
+                '{{#each data}}{{this}}    {{~/each}}',
+                array('data' => array(1, 2, 3, 4)),
+                '1234'
+            ),
+            array(
+                '{{#each data~}}    {{this}}{{/each}}',
+                array('data' => array(1, 2, 3, 4)),
+                '1234'
+            ),
+            array('{{#if first}}The first{{else}}{{#if second}}The second{{/if}}{{/if}}',
+                array('first' => false, 'second' => true),
+                'The second'
+            )
         );
     }
 
@@ -441,7 +529,7 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
     public function testHelpersManagement()
     {
         $helpers = new \Handlebars\Helpers(array('test' => function () {
-            }), false);
+        }), false);
         $engine = new \Handlebars\Handlebars(array('helpers' => $helpers));
         $this->assertTrue(is_callable($engine->getHelper('test')));
         $this->assertTrue($engine->hasHelper('test'));
@@ -469,7 +557,7 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('Test helper is called with a b c', $engine->render('{{test2 a b c}}', array()));
 
         $engine->addHelper('renderme', function () {
-            return new \Handlebars\String("{{test}}");
+            return new \Handlebars\StringWrapper("{{test}}");
         });
         $this->assertEquals('Test helper is called', $engine->render('{{#renderme}}', array()));
 
@@ -488,6 +576,43 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
             return new \Handlebars\SafeString('<strong>Test</strong>');
         });
         $this->assertEquals('<strong>Test</strong>', $engine->render('{{safeStringTest}}', array()));
+
+        $engine->addHelper('argsTest', function ($template, $context, $arg) {
+            $parsedArgs = $template->parseArguments($arg);
+
+            return implode(' ', $parsedArgs);
+        });
+        $this->assertEquals("a \"b\" c", $engine->render('{{{argsTest "a" "\"b\"" \'c\'}}}', array()));
+
+        // This is just a fun thing to do :)
+        $that = $this;
+        $engine->addHelper('stopToken',
+            function ($template, $context, $arg) use ($that) {
+                /** @var $template \Handlebars\Template */
+                $parsedArgs = $template->parseArguments($arg);
+                $first = array_shift($parsedArgs);
+                $last = array_shift($parsedArgs);
+                if ($last == 'yes') {
+                    $template->setStopToken($first);
+                    $that->assertEquals($first, $template->getStopToken());
+                    $buffer = $template->render($context);
+                    $template->setStopToken(false);
+                    $template->discard($context);
+                } else {
+                    $template->setStopToken($first);
+                    $that->assertEquals($first, $template->getStopToken());
+                    $template->discard($context);
+                    $template->setStopToken(false);
+                    $buffer = $template->render($context);
+                }
+                return $buffer;
+            });
+
+        $this->assertEquals("Used", $engine->render('{{# stopToken fun no}}Not used{{ fun }}Used{{/stopToken }}', array()));
+        $this->assertEquals("Not used", $engine->render('{{# stopToken any yes}}Not used{{ any }}Used{{/stopToken }}', array()));
+
+        $this->setExpectedException('InvalidArgumentException');
+        $engine->getHelpers()->call('invalid', $engine->loadTemplate(''), new \Handlebars\Context(), '', '');
     }
 
     public function testInvalidHelper()
@@ -507,10 +632,13 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
         $engine = new \Handlebars\Handlebars(array('loader' => $loader));
         $this->assertEquals('yes', $engine->render('{{#x}}yes{{/x}}', array('x' => true)));
         $this->assertEquals('', $engine->render('{{#x}}yes{{/x}}', array('x' => false)));
+        $this->assertEquals('', $engine->render('{{#NOTVALID}}XXX{{/NOTVALID}}', array()));
         $this->assertEquals('yes', $engine->render('{{^x}}yes{{/x}}', array('x' => false)));
+        $this->assertEquals('', $engine->render('{{^x}}yes{{/x}}', array('x' => true)));
         $this->assertEquals('1234', $engine->render('{{#x}}{{this}}{{/x}}', array('x' => array(1, 2, 3, 4))));
         $this->assertEquals('012', $engine->render('{{#x}}{{@index}}{{/x}}', array('x' => array('a', 'b', 'c'))));
         $this->assertEquals('abc', $engine->render('{{#x}}{{@key}}{{/x}}', array('x' => array('a' => 1, 'b' => 2, 'c' => 3))));
+        $this->assertEquals('the_only_key', $engine->render('{{#x}}{{@key}}{{/x}}', array('x' => array('the_only_key' => 1))));
         $std = new stdClass();
         $std->value = 1;
         $this->assertEquals('1', $engine->render('{{#x}}{{value}}{{/x}}', array('x' => $std)));
@@ -528,7 +656,7 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Test add/get/has/clear functions on helper class
+     * Test add/addHelpers/get/getAll/has/clear functions on helper class
      */
     public function testHelpersClass()
     {
@@ -550,6 +678,17 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($helpers->has('test'));
         $this->assertFalse(isset($helpers->test));
         $this->assertTrue($helpers->isEmpty());
+        $helpers->add('test', function () {
+        });
+        $this->assertCount(0, array_diff(array_keys($helpers->getAll()), array('test')));
+        $extraHelpers = new \Handlebars\Helpers();
+        $extraHelpers->add('test', function () {
+        });
+        $extraHelpers->add('test2', function () {
+        });
+        $helpers->addHelpers($extraHelpers);
+        $this->assertTrue($helpers->has('test2'));
+        $this->assertEquals($helpers->test, $extraHelpers->test);
     }
 
     /**
@@ -590,9 +729,9 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
     /**
      * test String class
      */
-    public function testStringClass()
+    public function testStringWrapperClass()
     {
-        $string = new \Handlebars\String('test');
+        $string = new \Handlebars\StringWrapper('test');
         $this->assertEquals('test', $string->getString());
         $string->setString('new');
         $this->assertEquals('new', $string->getString());
@@ -650,6 +789,23 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
         $engine = new \Handlebars\Handlebars();
         $engine->setLoader($loader);
         $this->assertEquals('test', $engine->render('loader', array()));
+    }
+
+    /**
+     * Test inline loader
+     */
+    public function testInlineLoader()
+    {
+        $loader = new \Handlebars\Loader\InlineLoader(__FILE__, __COMPILER_HALT_OFFSET__);
+        $this->assertEquals('This is a inline template.', $loader->load('template1'));
+
+        $expected = <<<EOM
+a
+b
+c
+d
+EOM;
+        $this->assertEquals($expected, $loader->load('template2'));
     }
 
     /**
@@ -713,7 +869,11 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
     public function testPartial()
     {
         $loader = new \Handlebars\Loader\StringLoader();
-        $partialLoader = new \Handlebars\Loader\ArrayLoader(array('test' => '{{key}}', 'bar' => 'its foo'));
+        $partialLoader = new \Handlebars\Loader\ArrayLoader(array(
+            'test' => '{{key}}',
+            'bar' => 'its foo',
+            'presetVariables' => '{{myVar}}',
+        ));
         $partialAliasses = array('foo' => 'bar');
         $engine = new \Handlebars\Handlebars(
             array(
@@ -722,6 +882,11 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
                 'partials_alias' => $partialAliasses
             )
         );
+
+        $this->assertEquals('foobar', $engine->render("{{>presetVariables myVar='foobar'}}", array()));
+        $this->assertEquals('foobar=barbaz', $engine->render("{{>presetVariables myVar='foobar=barbaz'}}", array()));
+        $this->assertEquals('qux', $engine->render("{{>presetVariables myVar=foo}}", array('foo' => 'qux')));
+        $this->assertEquals('qux', $engine->render("{{>presetVariables myVar=foo.bar}}", array('foo' => array('bar' => 'qux'))));
 
         $this->assertEquals('HELLO', $engine->render('{{>test parameter}}', array('parameter' => array('key' => 'HELLO'))));
         $this->assertEquals('its foo', $engine->render('{{>foo}}', array()));
@@ -752,13 +917,16 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('var-y-z', $engine->render('{{var.y.z}}', array('var' => $var)));
         // Access parent context in with helper
         $this->assertEquals('var-x', $engine->render('{{#with var.y}}{{../var.x}}{{/with}}', array('var' => $var)));
+        // Reference array as string
+        $this->assertEquals('Array', $engine->render('{{var}}', array('var' => array('test'))));
+
+        // Test class with __toString method
+        $this->assertEquals('test', $engine->render('{{var}}', array('var' => new TestClassWithToStringMethod())));
 
         $obj = new DateTime();
         $time = $obj->getTimestamp();
         $this->assertEquals($time, $engine->render('{{time.getTimestamp}}', array('time' => $obj)));
-
     }
-
 
     public function testContext()
     {
@@ -813,6 +981,39 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
         );
     }
 
+
+    /**
+     * Test invalid custom template class
+     *
+     * @expectedException \InvalidArgumentException
+     */
+    public function testInvalidCustomTemplateClass()
+    {
+        $loader = new \Handlebars\Loader\StringLoader();
+        $engine = new \Handlebars\Handlebars(array(
+            'loader' => $loader,
+            'template_class' => 'stdclass'
+        ));
+    }
+
+    /**
+     * Test custom template class
+     */
+    public function testValidCustomTemplateClass()
+    {
+        Handlebars\Autoloader::register(realpath(__DIR__ . '/../fixture/'));
+
+        $loader = new \Handlebars\Loader\StringLoader();
+        $engine = new \Handlebars\Handlebars(array(
+            'loader' => $loader,
+            'template_class' => 'Handlebars\CustomTemplate'
+        ));
+
+        $render = $engine->render('Original Template', array());
+
+        $this->assertEquals($render, 'Altered Template');
+    }
+
     /**
      * Test for proper handling of the length property
      **/
@@ -844,6 +1045,7 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
             array('arg1 "arg\"2" "\\\'arg3\\\'"', array("arg1", 'arg"2', "'arg3'")),
             array('arg1 arg2.[value\'s "segment"].val', array("arg1", 'arg2.[value\'s "segment"].val')),
             array('"arg1.[value 1]" arg2', array("arg1.[value 1]", 'arg2')),
+            array('0', array('0')),
         );
     }
 
@@ -867,7 +1069,117 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
             return (string)$a;
         }, $args);
         $this->assertEquals($args, $expected_array);
+    }
 
+    public function namedArgumentParserProvider()
+    {
+        return array(
+            array('arg1="value" arg2="value 2"', array('arg1' => 'value', 'arg2' => 'value 2')),
+            array('arg1=var1', array('arg1' => 'var1')),
+            array('[arg "1"]="arg number 1"', array('arg "1"' => "arg number 1")),
+            array('arg1 =   "value"', array('arg1' => "value")),
+        );
+    }
+
+    /**
+     * Test Named Argument Parser
+     *
+     * @param string $arg_string argument text
+     * @param        $expected_array
+     *
+     * @dataProvider namedArgumentParserProvider
+     *
+     * @return void
+     */
+    public function testNamedArgumentsParser($arg_string, $expected_array)
+    {
+        $engine = new \Handlebars\Handlebars();
+        $template = new \Handlebars\Template($engine, null, null);
+        // get the string version of the arguments array
+        $args = $template->parseNamedArguments($arg_string);
+        $args = array_map(function ($a) {
+            return (string)$a;
+        }, $args);
+        $this->assertEquals($args, $expected_array);
+    }
+
+    /**
+     * Test Combined Arguments Parser
+     *
+     * @param string $arg_string argument text
+     * @param        $positional_args
+     * @param        $named_args
+     *
+     * @dataProvider combinedArgumentsParserProvider
+     *
+     * @return void
+     */
+    public function testCombinedArgumentsParser($arg_string, $positional_args, $named_args)
+    {
+        $args = new \Handlebars\Arguments($arg_string);
+
+        // Get the string version of the arguments array
+        $stringify = function ($a) {
+            return (string)$a;
+        };
+
+        if ($positional_args !== false) {
+            $this->assertEquals(
+                array_map($stringify, $args->getPositionalArguments()),
+                $positional_args
+            );
+        }
+        if ($named_args !== false) {
+            $this->assertEquals(
+                array_map($stringify, $args->getNamedArguments()),
+                $named_args
+            );
+        }
+    }
+
+    public function combinedArgumentsParserProvider()
+    {
+        $result = array();
+
+        // Use data provider for positional arguments parser
+        foreach ($this->argumentParserProvider() as $dataSet) {
+            $result[] = array(
+                $dataSet[0],
+                $dataSet[1],
+                false,
+            );
+        }
+
+        // Use data provider for named arguments parser
+        foreach ($this->namedArgumentParserProvider() as $dataSet) {
+            $result[] = array(
+                $dataSet[0],
+                false,
+                $dataSet[1],
+            );
+        }
+
+        // Add test cases with combined arguments
+        return array_merge(
+            $result,
+            array(
+                array(
+                    'arg1 arg2 arg3=value1 arg4="value2"',
+                    array('arg1', 'arg2'),
+                    array('arg3' => 'value1', 'arg4' => 'value2')
+                ),
+                array(
+                    '@first arg=@last',
+                    array('@first'),
+                    array('arg' => '@last')
+                ),
+                array(
+                    '[seg arg1] [seg arg2] = [seg value "1"]',
+                    array('[seg arg1]'),
+                    array('seg arg2' => '[seg value "1"]')
+                )
+            )
+        );
     }
 
     public function stringLiteralInCustomHelperProvider()
@@ -906,9 +1218,46 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($res, $results);
     }
 
+    public function integerLiteralInCustomHelperProvider()
+    {
+        return array(
+            array('{{test -5}}', array(), '-5'),
+            array('{{test 0}}', array(), '0'),
+            array('{{test 12}}', array(), '12'),
+            array('{{test 12 [12]}}', array('12' => 'foo'), '12:foo'),
+        );
+    }
+
+    /**
+     * Test integer literals in the context of a helper
+     *
+     * @param string $template template text
+     * @param array  $data     context data
+     * @param string $results  The Expected Results
+     *
+     * @dataProvider integerLiteralInCustomHelperProvider
+     *
+     * @return void
+     */
+    public function testIntegerLiteralInCustomHelper($template, $data, $results)
+    {
+        $engine = new \Handlebars\Handlebars();
+        $engine->addHelper('test', function ($template, $context, $args) {
+            $args = $template->parseArguments($args);
+
+            $args = array_map(function ($a) use ($context) {
+                return $context->get($a);
+            }, $args);
+
+            return implode(':', $args);
+        });
+        $res = $engine->render($template, $data);
+        $this->assertEquals($res, $results);
+    }
+
     public function testString()
     {
-        $string = new \Handlebars\String("Hello World");
+        $string = new \Handlebars\StringWrapper("Hello World");
         $this->assertEquals((string)$string, "Hello World");
     }
 
@@ -935,7 +1284,6 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
                 $this->assertInstanceOf("InvalidArgumentException", $e);
             }
         }
-
     }
 
     /**
@@ -945,25 +1293,165 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
     {
         $loader = new \Handlebars\Loader\StringLoader();
         $engine = new \Handlebars\Handlebars(array('loader' => $loader));
-        $engine->addHelper('test', function ($template, $context, $arg) {
-            return $arg.'Test.';
+        $engine->addHelper('test', function ($template, $context, $args) {
+            $parsedArgs = $template->parseArguments($args);
+
+            return (count($parsedArgs) ? $context->get($parsedArgs[0]) : '') . 'Test.';
         });
 
         // assert that nested syntax is accepted and sub-helper is run
         $this->assertEquals('Test.Test.', $engine->render('{{test (test)}}', array()));
 
-        $engine->addHelper('add', function ($template, $context, $arg) {
-            $values = explode( " ", $arg );
-            return $values[0] + $values[1];
+        $engine->addHelper('add', function ($template, $context, $args) {
+            $sum = 0;
+
+            foreach ($template->parseArguments($args) as $value) {
+                $sum += intval($context->get($value));
+            }
+
+            return $sum;
         });
 
         // assert that subexpression result is inserted correctly as argument to top level helper
         $this->assertEquals('42', $engine->render('{{add 21 (add 10 (add 5 6))}}', array()));
 
-
         // assert that bracketed expressions within string literals are treated correctly
-        $this->assertEquals("'(test)'Test.", $engine->render("{{test '(test)'}}", array()));
-        $this->assertEquals("')'Test.Test.", $engine->render("{{test (test ')')}}", array()));
+        $this->assertEquals("(test)Test.", $engine->render("{{test '(test)'}}", array()));
+        $this->assertEquals(")Test.Test.", $engine->render("{{test (test ')')}}", array()));
+
+        $engine->addHelper('concat', function (\Handlebars\Template $template, \Handlebars\Context $context, $args) {
+            $result = '';
+
+            foreach ($template->parseArguments($args) as $arg) {
+                $result .= $context->get($arg);
+            }
+
+            return $result;
+        });
+
+        $this->assertEquals('ACB', $engine->render('{{concat a (concat c b)}}', array('a' => 'A', 'b' => 'B', 'c' => 'C')));
+        $this->assertEquals('ACB', $engine->render('{{concat (concat a c) b}}', array('a' => 'A', 'b' => 'B', 'c' => 'C')));
+        $this->assertEquals('A-B', $engine->render('{{concat (concat a "-") b}}', array('a' => 'A', 'b' => 'B')));
+        $this->assertEquals('A-B', $engine->render('{{concat (concat a "-") b}}', array('a' => 'A', 'b' => 'B', 'A-' => '!')));
+    }
+
+    /**
+     * Test if and unless adding an extra layer when accessing parent
+     */
+    public function testIfUnlessExtraLayer()
+    {
+        $loader = new \Handlebars\Loader\StringLoader();
+        $engine = new \Handlebars\Handlebars(array('loader' => $loader));
+
+        $this->assertEquals('good', $engine->render('{{#with b}}{{#if this}}{{../../a}}{{/if}}{{/with}}', array('a' => 'good', 'b' => 'stump')));
+        $this->assertEquals('good', $engine->render('{{#with b}}{{#unless false}}{{../../a}}{{/unless}}{{/with}}', array('a' => 'good', 'b' => 'stump')));
+    }
+
+    /**
+     * Test of Arguments to string conversion.
+     */
+    public function testArgumentsString()
+    {
+        $argsString = 'foo bar [foo bar] baz="value"';
+        $args = new \Handlebars\Arguments($argsString);
+        $this->assertEquals($argsString, (string)$args);
+    }
+
+
+    public function stringLiteralsInIfAndUnlessHelpersProvider()
+    {
+        return array(
+            // IfHelper
+            array('{{#if "truthyString"}}true{{else}}false{{/if}}', array(), "true"),
+            array("{{#if 'truthyStringSingleQuotes'}}true{{else}}false{{/if}}", array(), "true"),
+            array("{{#if ''}}true{{else}}false{{/if}}", array(), "false"),
+            array("{{#if '0'}}true{{else}}false{{/if}}", array(), "false"),
+            array("{{#if (add 0 1)}}true{{else}}false{{/if}}", array(), "true"),
+            array("{{#if (add 1 -1)}}true{{else}}false{{/if}}", array(), "false"),
+            // UnlessHelper
+            array('{{#unless "truthyString"}}true{{else}}false{{/unless}}', array(), "false"),
+            array("{{#unless 'truthyStringSingleQuotes'}}true{{else}}false{{/unless}}", array(), "false"),
+            array("{{#unless ''}}true{{else}}false{{/unless}}", array(), "true"),
+            array("{{#unless '0'}}true{{else}}false{{/unless}}", array(), "true"),
+            array("{{#unless (add 0 1)}}true{{else}}false{{/unless}}", array(), "false"),
+            array("{{#unless (add 1 -1)}}true{{else}}false{{/unless}}", array(), "true"),
+        );
+    }
+
+    /**
+     * Test string literals in the context of if and unless helpers
+     *
+     * @param string $template template text
+     * @param array  $data     context data
+     * @param string $results  The Expected Results
+     *
+     * @dataProvider stringLiteralsInIfAndUnlessHelpersProvider
+     *
+     * @return void
+     */
+    public function testStringLiteralsInIfAndUnlessHelpers($template, $data, $results)
+    {
+        $engine = new \Handlebars\Handlebars();
+
+        $engine->addHelper('add', function ($template, $context, $args) {
+            $sum = 0;
+
+            foreach ($template->parseArguments($args) as $value) {
+                $sum += intval($context->get($value));
+            }
+
+            return $sum;
+        });
+
+        $res = $engine->render($template, $data);
+        $this->assertEquals($res, $results);
+    }
+
+    public function rootSpecialVariableProvider()
+    {
+        return array(
+            array('{{foo}} {{ @root.foo }}', array( 'foo' => 'bar' ), "bar bar"),
+            array('{{@root.foo}} {{#each arr}}{{ @root.foo }}{{/each}}', array( 'foo' => 'bar', 'arr' => array( '1' ) ), "bar bar"),
+        );
+    }
+
+    /**
+     * Test 'root' special variable
+     *
+     * @param string $template template text
+     * @param array  $data     context data
+     * @param string $results  The Expected Results
+     *
+     * @dataProvider rootSpecialVariableProvider
+     *
+     * @return void
+     */
+    public function testRootSpecialVariableHelpers($template, $data, $results)
+    {
+        $engine = new \Handlebars\Handlebars();
+
+        $res = $engine->render($template, $data);
+        $this->assertEquals($res, $results);
     }
 
 }
+
+class TestClassWithToStringMethod {
+    public function __toString() {
+        return 'test';
+    }
+}
+
+/**
+ * Testcase for testInlineLoader
+ *
+ */
+__halt_compiler();
+@@ template1
+This is a inline template.
+
+@@ template2
+a
+b
+c
+d

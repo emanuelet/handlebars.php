@@ -9,6 +9,7 @@
  * @package   Handlebars
  * @author    fzerorubigd <fzerorubigd@gmail.com>
  * @author    Behrooz Shabani <everplays@gmail.com>
+ * @author    Jeff Turcotte <jeff.turcotte@gmail.com>
  * @copyright 2010-2012 (c) Justin Hileman
  * @copyright 2012 (c) ParsPooyesh Co
  * @copyright 2013 (c) Behrooz Shabani
@@ -86,6 +87,11 @@ class Handlebars
     private $_cache;
 
     /**
+     * @var string the class to use for the template
+     */
+    private $_templateClass = 'Handlebars\\Template';
+
+    /**
      * @var callable escape function to use
      */
     private $_escape = 'htmlspecialchars';
@@ -109,6 +115,7 @@ class Handlebars
      * loader         => Loader object
      * partials_loader => Loader object
      * cache          => Cache object
+     * template_class => the class to use for the template object
      *
      * @param array $options array of options to set
      *
@@ -141,6 +148,10 @@ class Handlebars
                 $cache = new Disk($cache);
             }
             $this->setCache($cache);
+        }
+
+        if (isset($options['template_class'])) {
+            $this->setTemplateClass($options['template_class']);
         }
 
         if (isset($options['escape'])) {
@@ -451,6 +462,27 @@ class Handlebars
     }
 
     /**
+     * Sets the class to use for the template object
+     *
+     * @param string $class the class name
+     *
+     * @return void
+     */
+    public function setTemplateClass($class)
+    {
+        if (!is_a($class, 'Handlebars\\Template', true)) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'Custom template class "%s" must extend Template',
+                    $class
+                )
+            );
+        }
+
+        $this->_templateClass = $class;
+    }
+
+    /**
      * Load a template by name with current template loader
      *
      * @param string $name template name
@@ -462,7 +494,7 @@ class Handlebars
         $source = $this->getLoader()->load($name);
         $tree = $this->_tokenize($source);
 
-        return new Template($this, $tree, $source);
+        return new $this->_templateClass($this, $tree, $source);
     }
 
     /**
@@ -480,7 +512,7 @@ class Handlebars
         $source = $this->getPartialsLoader()->load($name);
         $tree = $this->_tokenize($source);
 
-        return new Template($this, $tree, $source);
+        return new $this->_templateClass($this, $tree, $source);
     }
 
     /**
@@ -521,7 +553,7 @@ class Handlebars
     {
         $tree = $this->_tokenize($source);
 
-        return new Template($this, $tree, $source);
+        return new $this->_templateClass($this, $tree, $source);
     }
 
     /**
