@@ -20,6 +20,7 @@
 
 namespace Handlebars;
 use Handlebars\Loader\StringLoader;
+use Handlebars\Cache\Disk;
 use Handlebars\Cache\Dummy;
 
 /**
@@ -134,8 +135,19 @@ class Handlebars
             $this->setPartialsLoader($options['partials_loader']);
         }
 
+        /*
+         * Add below code based on mustache-php at 
+         * https://github.com/bobthecow/mustache.php
+         * to accommodate Symfony 2 calling convention as below
+         * new \Handlebars\Handlebars(array('cache' => '/vagrant/app/cache/test/handlebars', 'charset' => 'UTF-8'))
+         */
         if (isset($options['cache'])) {
-            $this->setCache($options['cache']);
+            $cache = $options['cache'];
+
+            if (is_string($cache)) {
+                $cache = new Disk($cache);
+            }
+            $this->setCache($cache);
         }
 
         if (isset($options['template_class'])) {

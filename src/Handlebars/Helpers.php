@@ -82,6 +82,7 @@ class Helpers
         $this->add('each', new Helper\EachHelper());
         $this->add('unless', new Helper\UnlessHelper());
         $this->add('with', new Helper\WithHelper());
+        $this->add('compare', new Helper\CompareHelper());
 
         //Just for compatibility with ember
         $this->add('bindAttr', new Helper\BindAttrHelper());

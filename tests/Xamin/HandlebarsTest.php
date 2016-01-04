@@ -197,7 +197,12 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
         $helpers = new \Handlebars\Helpers();
         $engine = new \Handlebars\Handlebars(array('loader' => $loader, 'helpers' => $helpers));
 
-        $this->assertEquals($result, $engine->render($src, $data));
+        if ($result == 'Exception') {
+            $this->setExpectedException('Exception');
+            $engine->render($src, $data);
+        } else {
+            $this->assertEquals($result, $engine->render($src, $data));
+        }
     }
 
     /**
@@ -208,6 +213,163 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
     public function internalHelpersdataProvider()
     {
         return array(
+            array(
+                '{{#compare foo "==" "Hello " }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => 'Hello'),
+                'Not Equal'
+            ),
+            array(
+                '{{#compare foo "==" "Hello" }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => 'Hello'),
+                'Equal'
+            ),
+            array(
+                '{{#compare "Hello" "==" foo }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => 'Hello'),
+                'Equal'
+            ),
+            array(
+                '{{#compare "foo" "==" "Hello" }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => 'Hello'),
+                'Not Equal'
+            ),
+            array(
+                '{{#compare foo "==" 1 }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => true),
+                'Equal'
+            ),
+            array(
+                '{{#compare foo "==" true }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => true),
+                'Equal'
+            ),            
+            array(
+                '{{#compare foo "==" bar }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => 'Hello', 'bar' => 'Hello'),
+                'Equal'
+            ),
+            array(
+                '{{#compare "Hello" "==" "Hello" }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => 'Hello'),
+                'Equal'
+            ),
+            array(
+                '{{#compare foo "==" bar }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => true, 'bar' => 1),
+                'Equal'
+            ),
+            array(
+                '{{#compare foo "==" bar }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => true, 'bar' => 0),
+                'Not Equal'
+            ),
+            array(
+                '{{#compare foo "===" bar }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => true, 'bar' => true),
+                'Equal'
+            ),
+            array(
+                '{{#compare foo "===" bar }}Equal{{else}}Not Equal{{/compare}}',
+                array('foo' => true, 'bar' => 1),
+                'Not Equal'
+            ),
+            array(
+                '{{#compare 5 "!==" foo }}Not Equal{{else}}Equal{{/compare}}',
+                array('foo' => 5),
+                'Equal'
+            ),
+            array(
+                '{{#compare "5" "!==" foo }}Not Equal{{else}}Equal{{/compare}}',
+                array('foo' => 5),
+                'Not Equal'
+            ),
+         
+            array(
+                '{{#compare foo "!==" 5 }}Not Equal{{else}}Equal{{/compare}}',
+                array('foo' => 5),
+                'Equal'
+            ),
+            array(
+                '{{#compare foo "!==" "5" }}Not Equal{{else}}Equal{{/compare}}',
+                array('foo' => 5),
+                'Not Equal'
+            ),
+                
+            array(
+                '{{#compare foo "!=" bar }}Not Equal{{else}}Equal{{/compare}}',
+                array('foo' => 4, 'bar' => 5),
+                'Not Equal'
+            ),
+            array(
+                '{{#compare foo "!=" bar }}Not Equal{{else}}Equal{{/compare}}',
+                array('foo' => 5, 'bar' => 5),
+                'Equal'
+            ),
+            array(
+                '{{#compare foo "!==" bar }}Not Equal{{else}}Equal{{/compare}}',
+                array('foo' => 4, 'bar' => 5),
+                'Not Equal'
+            ),
+            array(
+                '{{#compare foo "<" bar }}Less{{else}}No Less{{/compare}}',
+                array('foo' => 4, 'bar' => 5),
+                'Less'
+            ),
+            array(
+                '{{#compare foo "<" bar }}Less{{else}}No Less{{/compare}}',
+                array('foo' => 5, 'bar' => 5),
+                'No Less'
+            ),
+            array(
+                '{{#compare foo ">" bar }}More{{else}}No More{{/compare}}',
+                array('foo' => 4, 'bar' => 5),
+                'No More'
+            ),
+            array(
+                '{{#compare foo ">" bar }}More{{else}}No More{{/compare}}',
+                array('foo' => 6, 'bar' => 5),
+                'More'
+            ),
+            array(
+                '{{#compare foo "<=" bar }}Less or Equal{{else}}Greater{{/compare}}',
+                array('foo' => 4, 'bar' => 5),
+                'Less or Equal'
+            ),
+            array(
+                '{{#compare foo "<=" bar }}Less or Equal{{else}}Greater{{/compare}}',
+                array('foo' => 6, 'bar' => 5),
+                'Greater'
+            ),
+            array(
+                '{{#compare foo ">=" bar }}More Equal{{else}}Less{{/compare}}',
+                array('foo' => 4, 'bar' => 5),
+                'Less'
+            ),
+            array(
+                '{{#compare foo ">=" bar }}More or Equal{{else}}Less{{/compare}}',
+                array('foo' => 6, 'bar' => 5),
+                'More or Equal'
+            ),
+            array(
+                '{{#compare foo "typeof" bar }}Boolen{{/compare}}',
+                array('foo' => true, 'bar' => 'boolean'),
+                'Boolen'
+            ),
+            array(
+                '{{#compare foo "typeof" bar }}String{{/compare}}',
+                array('foo' => 'abc', 'bar' => 'string'),
+                'String'
+            ),
+            array(
+                '{{#compare foo "<>" bar }}String{{/compare}}',
+                array('foo' => 'abc', 'bar' => 'string'),
+                'Exception'
+            ),
+            array(
+                '{{#compare foo "<> bar }}String{{/compare}}',
+                array('foo' => 'abc', 'bar' => 'string'),
+                'Exception'
+            ),
             array(
                 '{{#if data}}Yes{{/if}}',
                 array('data' => true),
@@ -443,7 +605,6 @@ class HandlebarsTest extends \PHPUnit_Framework_TestCase
                     $template->setStopToken(false);
                     $buffer = $template->render($context);
                 }
-
                 return $buffer;
             });
 

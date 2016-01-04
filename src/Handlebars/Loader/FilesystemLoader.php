@@ -42,7 +42,7 @@ use Handlebars\StringWrapper;
 class FilesystemLoader implements Loader
 {
     protected $baseDir;
-    private $_extension = '.handlebars';
+    private $_extension = '.html.handlebars';
     private $_prefix = '';
     private $_templates = array();
 
